@@ -15,6 +15,7 @@ export interface Note {
 interface NotesContextType {
   notes: Note[];
   addNote: (title: string, content: string) => Promise<void>;
+  updateNote: (id: string, title: string, content: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   isLoading: boolean;
 }
@@ -73,7 +74,6 @@ export const NotesProvider = ({ children }: { children: ReactNode }) => {
       });
       if (!res.ok) throw new Error('Failed to add note');
       
-      // Refetch notes to get the latest list including the new one
       await fetchNotes();
 
     } catch (error) {
@@ -82,11 +82,38 @@ export const NotesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateNote = async (id: string, title: string, content: string) => {
+    if (!token) return;
+
+    const originalNotes = [...notes];
+    const updatedNote = { ...notes.find(n => n.id === id)!, title, content };
+    setNotes(notes.map(n => n.id === id ? updatedNote : n));
+
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ title, content })
+      });
+      if (!res.ok) throw new Error('Failed to update note');
+      
+      // Refetch for consistency, although optimistic update is in place
+      await fetchNotes();
+
+    } catch (error) {
+      console.error("Failed to update note", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update your note.' });
+      setNotes(originalNotes); // Rollback
+    }
+  };
+
   const deleteNote = async (id: string) => {
     if (!token) return;
     const originalNotes = [...notes];
     
-    // Optimistic deletion
     setNotes(notes.filter(note => note.id !== id));
 
     try {
@@ -96,16 +123,14 @@ export const NotesProvider = ({ children }: { children: ReactNode }) => {
       });
       if (!res.ok) throw new Error('Failed to delete note');
       
-      // No need to refetch, optimistic update was successful
     } catch (error) {
       console.error("Failed to delete note", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete your note.' });
-      // Rollback on failure
       setNotes(originalNotes);
     }
   };
   
-  const value = { notes, addNote, deleteNote, isLoading };
+  const value = { notes, addNote, updateNote, deleteNote, isLoading };
 
   return (
     <NotesContext.Provider value={value}>

@@ -31,7 +31,7 @@ export default function RegisterPage() {
   
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/profile");
+      router.replace("/");
     }
   }, [isAuthenticated, router]);
 

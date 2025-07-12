@@ -3,6 +3,7 @@
 import { createContext, useState, useEffect, useContext, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
+import { NotesProvider } from './NotesContext';
 
 interface User {
   id: string;
@@ -55,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (storedUser) {
         localStorage.setItem('authUser', JSON.stringify(storedUser));
         setUser(storedUser);
-        router.push('/profile');
+        router.push('/');
         toast({ title: "Login Successful", description: `Welcome back, ${storedUser.name}!` });
       } else {
         toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or password." });
@@ -88,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('users', JSON.stringify(users));
       localStorage.setItem('authUser', JSON.stringify(newUser));
       setUser(newUser);
-      router.push('/profile');
+      router.push('/');
       toast({ title: "Registration Successful", description: `Welcome, ${name}!` });
     } catch (error) {
         toast({ variant: "destructive", title: "Registration Failed", description: "An error occurred." });
@@ -99,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('authUser');
+    localStorage.removeItem('notes');
     setUser(null);
     router.push('/login');
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
@@ -115,7 +117,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      <NotesProvider>
+        {children}
+      </NotesProvider>
     </AuthContext.Provider>
   );
 };

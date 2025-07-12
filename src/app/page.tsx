@@ -1,29 +1,26 @@
-import { Button } from "@/components/ui/button";
-import { ArrowRight, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+"use client";
+
+import { useAuth } from "@/context/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import NotesDashboard from "@/components/NotesDashboard";
+import LandingPage from "@/components/LandingPage";
 
 export default function Home() {
-  return (
-    <div className="flex flex-col items-center justify-center text-center py-20">
-      <div className="bg-primary/10 p-4 rounded-full mb-6 border border-primary/20">
-        <ShieldCheck className="h-12 w-12 text-primary" />
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <Skeleton className="h-40 w-full md:w-1/2 mx-auto" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       </div>
-      <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4">
-        Welcome to <span className="text-primary">AuthNexus</span>
-      </h1>
-      <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-        Your secure, modern, and seamless authentication partner. Join us to experience a new level of security and user experience.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Button asChild size="lg">
-          <Link href="/register">
-            Get Started <ArrowRight className="ml-2 h-5 w-5" />
-          </Link>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <Link href="/login">Sign In</Link>
-        </Button>
-      </div>
-    </div>
-  );
+    );
+  }
+
+  return isAuthenticated ? <NotesDashboard /> : <LandingPage />;
 }

@@ -13,6 +13,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -31,12 +33,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('authUser');
-      if (storedUser) {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedUser && storedToken) {
         setUser(JSON.parse(storedUser));
+        setToken(storedToken);
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
       localStorage.removeItem('authUser');
+      localStorage.removeItem('authToken');
     } finally {
       setIsLoading(false);
     }
@@ -44,25 +49,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     try {
-      // This is a mock implementation.
-      // In a real app, you would verify password hash.
-      const storedData = localStorage.getItem('users');
-      const users = storedData ? JSON.parse(storedData) : {};
-      const storedUser = Object.values(users).find((u: any) => u.email === email) as User | undefined;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
 
-      if (storedUser) {
-        localStorage.setItem('authUser', JSON.stringify(storedUser));
-        setUser(storedUser);
-        router.push('/');
-        toast({ title: "Login Successful", description: `Welcome back, ${storedUser.name}!` });
-      } else {
-        toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or password." });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Something went wrong');
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "An error occurred", description: "Please try again." });
+
+      const { user: userData, token: authToken } = data;
+      localStorage.setItem('authUser', JSON.stringify(userData));
+      localStorage.setItem('authToken', authToken);
+      setUser(userData);
+      setToken(authToken);
+      router.push('/');
+      toast({ title: "Login Successful", description: `Welcome back, ${userData.name}!` });
+
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Login Failed", description: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -70,45 +79,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (name: string, email: string, pass: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     try {
-      // This is a mock implementation.
-      const storedData = localStorage.getItem('users');
-      const users = storedData ? JSON.parse(storedData) : {};
-      
-      if (Object.values(users).some((u: any) => u.email === email)) {
-        toast({ variant: "destructive", title: "Registration Failed", description: "Email already in use." });
-        setIsLoading(false);
-        return;
-      }
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password: pass }),
+        });
 
-      const newUser: User = { id: Date.now().toString(), name, email };
-      users[newUser.id] = newUser;
+        const data = await res.json();
+        
+        if (!res.ok) {
+            throw new Error(data.message || "Registration failed");
+        }
+        
+        // After successful registration, log the user in
+        await login(email, pass);
 
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('authUser', JSON.stringify(newUser));
-      setUser(newUser);
-      router.push('/');
-      toast({ title: "Registration Successful", description: `Welcome, ${name}!` });
-    } catch (error) {
-        toast({ variant: "destructive", title: "Registration Failed", description: "An error occurred." });
-    } finally {
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Registration Failed", description: error.message });
         setIsLoading(false);
     }
   };
 
   const logout = () => {
     localStorage.removeItem('authUser');
-    localStorage.removeItem('notes');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('notes'); // Also clear notes on logout
     setUser(null);
+    setToken(null);
     router.push('/login');
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
 
   const value = {
     user,
-    isAuthenticated: !!user,
+    token,
+    isAuthenticated: !!user && !!token,
     isLoading,
     login,
     register,

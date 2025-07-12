@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  NextResponse as GenkitNextResponse,
-  middleware as genkitMiddleware,
-} from '@genkit-ai/next';
 
 export async function middleware(req: NextRequest) {
-  if (req.nextUrl.pathname.startsWith('/api/genkit')) {
-    // This is the Genkit API, so let Genkit handle it.
-    return genkitMiddleware();
-  }
-  
-  // For all other requests, continue as normal.
+  // For all requests, continue as normal.
   return NextResponse.next();
 }
 

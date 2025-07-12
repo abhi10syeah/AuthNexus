@@ -6,6 +6,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // This matches all paths except for the ones that start with specific static assets.
-  matcher: '/((?!_next/static|_next/image|favicon.ico).*)',
+  // This matches all paths except for API routes and static assets.
+  matcher: '/((?!api|_next/static|_next/image|favicon.ico).*)',
 };
